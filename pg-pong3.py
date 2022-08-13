@@ -4,9 +4,9 @@ import pickle
 import gym
 
 # hyperparameters
-H = 200 # number of hidden layer neurons
-batch_size = 10 # every how many episodes to do a param update?
-learning_rate = 1
+H =500 # number of hidden layer neurons
+batch_size = 5 # every how many episodes to do a param update?
+learning_rate = 1e-3
 gamma = 0.99 # discount factor for reward
 decay_rate = 0.99 # decay factor for RMSProp leaky sum of grad^2
 resume = False # resume from previous checkpoint?
@@ -61,15 +61,15 @@ def policy_backward(eph, epdlogp):
   dW1 = np.dot(dh.T, epx)
   return {'W1':dW1, 'W2':dW2}
 
-env = gym.make("Pong-v0") if not render else gym.make("Pong-v0",render_mode='human')
+env = gym.make("Pong-v0")
 observation = env.reset()
 prev_x = None # used in computing the difference frame
 xs,hs,dlogps,drs = [],[],[],[]
 running_reward = None
 reward_sum = 0
 episode_number = 0
-
 while True:
+  if render: env.render()
 
   # preprocess the observation, set input to network to be difference image
   cur_x = prepro(observation)
@@ -91,7 +91,10 @@ while True:
   reward_sum += reward
 
   drs.append(reward) # record reward (has to be done after we call step() to get reward for previous action)
-
+  
+  if reward != 0: # Pong has either +1 or -1 reward exactly when game ends.
+    print(('ep %d: game finished, reward: %f' % (episode_number, reward)) + ('' if reward == -1 else ' !!!!!!!!'))
+    
   if done: # an episode finished
     episode_number += 1
 
@@ -122,11 +125,8 @@ while True:
 
     # boring book-keeping
     running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
-    print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
+    print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward) )
     if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
     reward_sum = 0
     observation = env.reset() # reset env
     prev_x = None
-
-  if reward != 0: # Pong has either +1 or -1 reward exactly when game ends.
-    print('ep {}: game finished, reward: {}'.format(episode_number, reward) + ('' if reward == -1 else ' !!!!!!!!'))
