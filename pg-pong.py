@@ -1,13 +1,12 @@
 """ Trains an agent with (stochastic) Policy Gradients on Pong. Uses OpenAI Gym. """
 import numpy as np
-#import cPickle as pickle
 import pickle
 import gym
 
 # hyperparameters
-H = 200 # number of hidden layer neurons
-batch_size = 10 # every how many episodes to do a param update?
-learning_rate = 1e-4
+H =200 # number of hidden layer neurons
+batch_size = 5 # every how many episodes to do a param update?
+learning_rate = 1e-3
 gamma = 0.99 # discount factor for reward
 decay_rate = 0.99 # decay factor for RMSProp leaky sum of grad^2
 resume = False # resume from previous checkpoint?
@@ -41,7 +40,7 @@ def discount_rewards(r):
   """ take 1D float array of rewards and compute discounted reward """
   discounted_r = np.zeros_like(r)
   running_add = 0
-  for t in reversed(xrange(0, r.size)):
+  for t in reversed(range(0, r.size)):
     if r[t] != 0: running_add = 0 # reset the sum, since this was a game boundary (pong specific!)
     running_add = running_add * gamma + r[t]
     discounted_r[t] = running_add
@@ -92,7 +91,10 @@ while True:
   reward_sum += reward
 
   drs.append(reward) # record reward (has to be done after we call step() to get reward for previous action)
-
+  
+  if reward != 0: # Pong has either +1 or -1 reward exactly when game ends.
+    print(('ep %d: game finished, reward: %f' % (episode_number, reward)) + ('' if reward == -1 else ' !!!!!!!!'))
+    
   if done: # an episode finished
     episode_number += 1
 
@@ -115,7 +117,7 @@ while True:
 
     # perform rmsprop parameter update every batch_size episodes
     if episode_number % batch_size == 0:
-      for k,v in model.iteritems():
+      for k,v in model.items():
         g = grad_buffer[k] # gradient
         rmsprop_cache[k] = decay_rate * rmsprop_cache[k] + (1 - decay_rate) * g**2
         model[k] += learning_rate * g / (np.sqrt(rmsprop_cache[k]) + 1e-5)
@@ -123,11 +125,8 @@ while True:
 
     # boring book-keeping
     running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
-    print ('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward))
+    print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward) )
     if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
     reward_sum = 0
     observation = env.reset() # reset env
     prev_x = None
-
-  if reward != 0: # Pong has either +1 or -1 reward exactly when game ends.
-      print('ep {}: game finished, reward: {}'.format(episode_number, reward) + ('' if reward == -1 else ' !!!!!!!!')) 
