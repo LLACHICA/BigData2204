@@ -2,6 +2,13 @@
 import numpy as np
 import pickle
 import gym
+import os, psutil
+from datetime import datetime
+
+start_time = datetime.now()
+print(f'Start Time is: {start_time}')
+print('Process Memory Usage(MB): ', psutil.Process(os.getpid()).memory_info().rss / 1024 ** 2)
+
 
 # hyperparameters
 H =200 # number of hidden layer neurons
@@ -126,6 +133,12 @@ while True:
     # boring book-keeping
     running_reward = reward_sum if running_reward is None else running_reward * 0.99 + reward_sum * 0.01
     print('resetting env. episode reward total was %f. running mean: %f' % (reward_sum, running_reward) )
+    if abs(running_reward) < 13.55:
+        time_elapsed = datetime.now() - start_time
+        print('Time elapsed (hh:mm:ss.ms) {}'.format(time_elapsed))
+        print('Stop Date/Time :', datetime.now())
+        break
+
     if episode_number % 100 == 0: pickle.dump(model, open('save.p', 'wb'))
     reward_sum = 0
     observation = env.reset() # reset env
